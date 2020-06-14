@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
+<link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
+<link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
+<link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
+<link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
+<link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
+<link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
+<link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
+<link rel="icon" type="image/png" sizes="192x192"  href="/android-icon-192x192.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="msapplication-TileColor" content="#ffffff">
+<meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
+<meta name="theme-color" content="#ffffff">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MyMusicBox</title>
+</head>
+<body onload="get_radio_list();">
+<style>
+.hide { position:absolute; top:-1px; left:-1px; width:1px; height:1px; }
+</style>
+<script type="text/javascript">
+    var mute = new Boolean(false);
+    var nb_streams = 0
+    var remote_url = location.origin
+
+    if(remote_url.localeCompare("file://")==0) {
+        remote_url="http://localhost"
+    }
+
+    var tm = setInterval(get_status, 1000);
+
+    async function get_status() {
+	  const response = await fetch(remote_url+':5001/get_stream_number');
+   	  const temp = await response.json(); //extract JSON from the http response
+	  stream_number = temp.stream_number;
+
+	  select_stream(stream_number);
+    }
+
+    function select_stream(stream_number) {
+        track_list = document.getElementsByClassName("track")
+        for (i=0; i<track_list.length; i++) {
+            if(track_list[i]["id"].localeCompare("track"+stream_number.toString()) == 0) {
+                track_list[i].cells[2].innerHTML = "<image height=\"25\" src=\"equalizer.gif\"></image>"
+            } else {
+                track_list[i].cells[2].innerHTML = ""
+            }
+        }
+    }
+
+    async function play_stream(stream_number) {
+	  const response = await fetch(remote_url+':5001/play/'+stream_number.toString());
+    }
+
+    async function toggle_mute() {
+        if(mute) {
+            const response = await fetch(remote_url+':5001/volume/mute');
+            document.getElementById("vol_mute").setAttribute("src","vol_unmute.jpg");
+        } else {
+            const response = await fetch(remote_url+':5001/volume/unmute');
+            document.getElementById("vol_mute").setAttribute("src","vol_mute.jpg");
+        }
+        mute = !mute;
+    }
+
+    async function volume_up() {
+	  const response = await fetch(remote_url+':5001/volume/up');
+    }
+
+    async function volume_down() {
+	  const response = await fetch(remote_url+':5001/volume/down');
+    }
+
+    async function stop() {
+	  const response = await fetch(remote_url+':5001/stop');
+	  select_stream(-1);
+    }
+
+    async function shutdown() {
+	  const response = await fetch(remote_url+':5001/shutdown', {method: 'POST'});
+    }
+
+	async function get_radio_list() {
+	  const response = await fetch(remote_url+':5001/get_streams_list');
+  	  const temp = await response.json(); //extract JSON from the http response
+	  radio_list = temp.streams;
+
+ 	  var doc = document.getElementById("list_of_streams");
+ 	  radio_list_html = "<table width=\"100%\" cellspacing=\"0\">";
+ 	  for(var key in radio_list) {
+          radio_list_html += "<tr class=\"track\" id=\"track"+key+"\"onclick=\"play_stream("+key+")\" ><td style=\"border-bottom: solid #BBBBBB 0.5mm\" width=\"30\"><image src=\""+radio_list[key]["thumbnail"]+"\" width=\"25\" height=\"25\"/></td><td style=\"border-bottom: solid #BBBBBB 0.5mm; font-family: arial; font-size: 12px\">"+radio_list[key]["name"]+"</td><td width=\"30\" style=\"border-bottom: solid #BBBBBB 0.5mm\"></td></tr>";
+      }
+      nb_streams = radio_list.length
+      radio_list_html += "</table>"
+      doc.innerHTML = radio_list_html ;
+    }
+</script>
+
+<table align="center" width="300">
+    <tr><td id="list_of_streams" colspan="5" bgcolor="#EEEEEE" style="border-bottom: solid black 2mm">
+    </td></tr>
+    <tr>
+        <td><image src="shutdown.jpg" width="45" height="40" onclick="shutdown();"></image></td>
+        <td><image src="stop.jpg" width="45" height="40" onclick="stop();"></image></td>
+        <td><image src="vol_minus.jpg" widht="45" height="40" onclick="volume_down();"></image></td>
+        <td><image src="vol_plus.jpg" width="45" height="40" onclick="volume_up();"></image></td>
+        <td><image id="vol_mute" src="vol_mute.jpg" widht="45" height="40" onclick="toggle_mute();"></image></td>
+    </tr>
+
+</table>
+
+<iframe name="hiddenFrame" id="hiddenFrame" class="hide"></iframe>
+
+</body>
+</html>
